@@ -1,0 +1,114 @@
+LIBRARY IEEE;  
+USE  IEEE.STD_LOGIC_1164.all;  	USE  IEEE.STD_LOGIC_UNSIGNED.all;  
+	  
+ENTITY mssCerradura IS  
+    PORT(clock,reset,start,Ingresar, Cambiar, Validar, Borrar, P_OR_V, Comp_30_Seg, Press_Tecla, Comp_5Dig,  
+    Com_Clave, Com_5Seg, Com_3Seg, Comp_Cambio, Cmp_Cambio_i, Cmp_3err: IN STD_LOGIC;  
+    Alarma, Correcto, Error, En_Seg, En_deco, En_Digito, En_dig_Press, En_Hab_Deco, En_Reg_Clave, En_RAM_R, En_cont_err,   
+    En_C_I, En_cambiar, En_ingresar, RAM_W_R, Rst_seg, Rst_dig_Press, Rst_Hab_Deco, Rst_cont_err, Rst_cambiar: OUT STD_LOGIC;
+	 estados:	out std_logic_vector(5 downto 0));  
+END mssCerradura;  
+  
+ 
+ARCHITECTURE archCerradura OF mssCerradura IS  
+Type estado is (A0,A1,A2,A3,A4,A5,A6,A7,A8,A9,A10,B0,B1,B2,B3,B4,B5,B6,B7,B8,B9,B10,B11,C0,C1,C2,C3,C4,C5,C6,C7,C8,C9,C10,C11,C12,D0,D1,D2,D3);  
+SIGNAL y:estado;  
+BEGIN  
+PROCESS(clock,reset)  
+      BEGIN  
+          if reset='0' then y<=A0;  
+          elsif (clock'event and clock='1') then  
+              case y is  
+                  when A0=>    if start='1' then y<=A1; else y<=A0; end if;  
+                  when A1=>    if start='0' then y<=A2; else y<=A1; end if;  
+                  when A2=>    if P_OR_V='0' then y<=A3; elsif P_OR_V='1' and Comp_30_Seg='1' then y<=B7; else y<=A2; end if;  
+                  when A3=>    if Ingresar='1' then y<=A4; elsif Ingresar='0' and Cambiar='1' then y<=B8; else y<=A3; end if;  
+                  when A4=>    if Ingresar='0' then y<=A5; else y<=A4; end if;  
+                  when A5=>    if Press_Tecla='1' then y<=A6; else y<=A5; end if;  
+                  when A6=>    if Press_Tecla='0' then y<=A7; else y<=A6; end if;  
+   				   when A7=> 	y<=A10;
+                  when A10=>    if Comp_5Dig='0' then y<=A8; else y<=A9; end if;  --antes a7
+                  when A8=>    y<=A5;  
+				      When A9=>    if Validar='0' and Borrar='1' then y<=B0; elsif Validar='1' and Borrar='0'then y<=B1; else y<=A9; end if; 
+                  when B0=>    if Borrar='0' then y<=B10; else y<=B0; end if;  
+                  when B10=>  y<=A5;  
+                  when B1=>   If Validar='0' then y<=B2;else y<=B1; end if;  
+                  when B2=>   if Com_Clave='1' then y<=B3; elsif Com_Clave='0' and Cmp_3err='0' then y<=B5; elsif Com_Clave='0' and Cmp_3err='1' then y<=B7; else y<=B2; end if;  
+                  when B3=>   if Com_5Seg='1' then y<=B4; else y<=B3; end if;  
+                  when B4=>   y<=A2;  
+                  when B5=>   if Com_3seg='1' then y<=B6; else y<=B5; end if;  
+                  when B6=>   y<=B11;
+					   when B11=>  y<=B10;
+                  when B7=>  
+                  when B8=>   if Cambiar='0' then y<=B9; else y<=B8; end if;  
+                  when B9=>   if Press_Tecla='1' then y<=C0; else y<=B9; end if;  
+                  when C0=>   if Press_Tecla='0' then y<=C1; else y<=C0; end if;
+					   when C1=>   y<=C10; 
+                  when C10=>  if Comp_5Dig='1' then y<=C3; else y<=C2; end if;  
+                  when C2=>   y<=B9;  
+                  when C3=>   if Validar='0' and Borrar='1' then y<=C4; elsif Validar='1' and Borrar='0' then y<=C6; else y<=C3; end if;  
+                  when C4=>   if Borrar='1' then y<=C6; else y<=C4; end if;  
+                  when C5=>   y<=B9;  
+                  when C6=>   if Validar='0' then y<=C7; else y<=C6; end if;  
+                  when C7=>   if Comp_Cambio='0' and Cmp_cambio_i='0' then y<=C8; elsif Comp_Cambio='1' and (Cmp_cambio_i='1' or Cmp_cambio_i='0') then y<=D2; elsif Comp_Cambio='0' and Cmp_cambio_i='1' then y<=C9; else y<=C7; end if;  
+                  when C8=>   y<=C7;  
+                  when C9=>   y<=C11; 
+					   when C11=>   y<=C12;
+					   when C12=>   y<=D0;
+                  when D0=>   if Com_3seg='1' then y<=D1; else y<=D0; end if;  
+                  when D1=>   y<=B4;  
+                  When D2=>   if Com_3seg='1' then y<=D3; else y<=D2; end if;  
+                  when D3=>    y<=B9;  
+             end case;  
+         end if;  
+END PROCESS;  
+      
+PROCESS(y)  
+    BEGIN  
+        Alarma<='0'; Correcto<='0'; Error<='0'; En_Seg<='0'; En_deco<='0'; En_Digito<='0'; En_dig_Press<='0'; En_Hab_Deco<='0'; En_Reg_Clave<='0';   
+        En_RAM_R<='0'; En_cont_err<='0'; En_C_I<='0'; En_cambiar<='0'; RAM_W_R<='0'; Rst_seg<='0'; Rst_dig_Press<='0'; Rst_Hab_Deco<='0'; Rst_cont_err<='0';  
+        Rst_cambiar<='0'; En_ingresar<='0'; estados<="000000"; 
+        case y is  
+                when A0=>    estados<="111111";  
+                when A1=>    Rst_Dig_Press<='1'; Rst_Cambiar<='1'; Rst_Hab_Deco<='1';Rst_seg<='1'; Rst_cont_err<='1'; estados<="000001";   
+                when A2=>    En_Seg<='1'; estados<="000010";   
+                when A3=>   Rst_Seg<='1'; estados<="000011";   
+                when A4=>   estados<="000100";   
+                when A5=>   estados<="000101";   
+                when A6=>   En_Digito<='1'; En_deco<='1';estados<="000110";    
+                when A7=>   En_Dig_Press<='1'; estados<="000111";    
+                when A8=>   En_Hab_Deco<='1';  estados<="001000";        
+                when A9=>   En_Reg_Clave<='1';En_RAM_R<='1';estados<="001001";     
+					 when A10=>  estados<="001010";  	
+                when B0=>   estados<="001011";   
+                when B1=>   estados<="001100"; 
+                when B2=>   estados<="001101";
+                when B3=>   Correcto<='1'; En_Seg<='1'; estados<="001110";
+                when B4=>    Rst_Dig_Press<='1'; Rst_Hab_Deco<='1'; Rst_cont_err<='1';Rst_seg<='1'; estados<="001111";       
+                when B5=>   Error<='1'; En_Seg<='1'; estados<="010000";    
+                when B6=>   Rst_Seg<='1'; estados<="010001"; 
+					 when B11=>  En_cont_err<='1'; estados<="010010";	
+                when B7=>    Alarma<='1'; estados<="010011"; 
+                when B8=>    estados<="010100"; 
+                when B9=>   estados<="010101";
+                when B10=>  Rst_Dig_Press<='1'; Rst_Hab_Deco<='1'; Rst_seg<='1';estados<="010110";  
+                when C0=>    En_Digito<='1'; En_deco<='1'; estados<="010111"; 
+                when C1=>   En_Dig_Press<='1'; estados<="011000"; 
+					 when C10=>  estados<="011001"; 	
+                when C2=>   En_Hab_Deco<='1'; estados<="011010";   
+                when C3=>   En_Reg_Clave<='1'; estados<="011011";        
+                when C4=>   estados<="011100";      
+                when C5=>   Rst_Dig_Press<='1'; Rst_Hab_Deco<='1'; Rst_seg<='1'; estados<="011101";         
+                when C6=>   estados<="011110";    
+                when C7=>   En_C_I<='1';En_RAM_R<='1';estados<="011111";     
+                when C8=>    En_Cambiar<='1'; estados<="100000";     
+                when C9=>   Rst_cambiar<='1'; Rst_Hab_Deco<='1'; En_ingresar<='1'; estados<="100001";  
+					 when C11=>  RAM_W_R<='1'; estados<="100010"; 
+					 when C12=>  En_RAM_R<='1'; estados<="100011"; 
+                when D0=>   Correcto<='1'; En_Seg<='1'; estados<="100100";  
+               when D1=>   Rst_Seg<='1'; estados<="100101";  
+                when D2=>   Error<='1'; En_Seg<='1'; estados<="100110";  
+                when D3=>   Rst_Dig_Press<='1'; Rst_Hab_Deco<='1'; Rst_cambiar<='1'; Rst_Seg<='1'; estados<="100111";   
+        end case;  
+END PROCESS;  
+END archCerradura; 
